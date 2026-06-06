@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from . import auth
 from .converter import CONVERT_OUTTYPES, convert_to_gguf, quantize_gguf
 from .downloader import download_model
 from .llama_cpp import resolve_llama_cpp
@@ -102,7 +103,10 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    sub = p.add_subparsers(dest="command", metavar="{download,convert,quantize}")
+    sub = p.add_subparsers(
+        dest="command",
+        metavar="{download,convert,quantize,login,logout,whoami}",
+    )
     sub.required = True
 
     # -- download -------------------------------------------------------- #
@@ -180,6 +184,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_llama_cpp_args(qz)
     qz.set_defaults(func=run_quantize)
+
+    # -- login ----------------------------------------------------------- #
+    li = sub.add_parser(
+        "login",
+        help="Save a HuggingFace token for gated/private downloads.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    li.add_argument(
+        "--token", default=None,
+        help=(
+            "HF access token. Falls back to HF_TOKEN / "
+            "HUGGING_FACE_HUB_TOKEN, then an interactive prompt."
+        ),
+    )
+    li.set_defaults(func=run_login)
+
+    # -- logout ---------------------------------------------------------- #
+    lo = sub.add_parser(
+        "logout",
+        help="Remove the saved HuggingFace token.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    lo.set_defaults(func=run_logout)
+
+    # -- whoami ---------------------------------------------------------- #
+    wi = sub.add_parser(
+        "whoami",
+        help="Show the HuggingFace user for the saved token.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    wi.set_defaults(func=run_whoami)
 
     return p
 
@@ -305,6 +340,27 @@ def run_quantize(args: argparse.Namespace) -> int:
         allow_build=not args.no_build,
     )
     print(f"Quantized GGUF written to {quant_path}")
+    return 0
+
+
+def run_login(args: argparse.Namespace) -> int:
+    name = auth.login(args.token)
+    print(f"Logged in as {name}. Token saved.")
+    return 0
+
+
+def run_logout(args: argparse.Namespace) -> int:
+    auth.logout()
+    print("Logged out; saved token removed.")
+    return 0
+
+
+def run_whoami(args: argparse.Namespace) -> int:
+    name = auth.whoami()
+    if name is None:
+        print("Not logged in. Run 'download-gguf login' to save a token.")
+        return 1
+    print(name)
     return 0
 
 

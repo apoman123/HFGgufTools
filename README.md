@@ -7,6 +7,9 @@ Download a model from the HuggingFace Hub and convert it to **GGUF**, convert a
 download   HuggingFace repo -> download weights -> convert to GGUF -> (optional) quantize
 convert    local model dir  ->                     convert to GGUF -> (optional) quantize
 quantize   local .gguf file ->                     quantize
+login      save a HuggingFace token (for gated/private repos)
+logout     remove the saved token
+whoami     show the user for the saved token
 ```
 
 The heavy lifting for conversion and quantization is done by
@@ -50,6 +53,24 @@ uv run download-gguf download org/Model \
   --weights-dir ./hf_weights \
   --gguf-dir    ./gguf_out
 # -> ./hf_weights/Model/ (safetensors, ...)   ./gguf_out/Model-f16.gguf
+```
+
+### `login` — save a HuggingFace token
+
+For gated or private repos you can save a token once instead of passing
+`--token` on every `download`. The token is stored in the standard HF
+credential store (`~/.cache/huggingface/token`) and is picked up automatically
+by later downloads (and other HF tools).
+
+```bash
+# Interactive (hidden) prompt
+uv run download-gguf login
+
+# Non-interactive (also reads HF_TOKEN / HUGGING_FACE_HUB_TOKEN if --token omitted)
+uv run download-gguf login --token "$HF_TOKEN"
+
+uv run download-gguf whoami    # show the logged-in user
+uv run download-gguf logout    # remove the saved token
 ```
 
 ### `convert` — a local model directory
